@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego de la Culebrita en Computadora y Móvil</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background-color: #000000;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const box = 20;  // Tamaño de la celda
+    let rows, columns;
+
+    let snake = [{ x: 10 * box, y: 10 * box }];
+    let direction = null;
+
+    let food = {};
+
+    // Ajustar el tamaño del canvas a pantalla completa
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      rows = Math.floor(canvas.height / box);
+      columns = Math.floor(canvas.width / box);
+      generateFood();
+    }
+
+    // Generar la comida en una posición aleatoria
+    function generateFood() {
+      food = {
+        x: Math.floor(Math.random() * columns) * box,
+        y: Math.floor(Math.random() * rows) * box,
+      };
+    }
+
+    // Detectar colisiones
+    function collision(newHead, snake) {
+      for (let i = 0; i < snake.length; i++) {
+        if (newHead.x === snake[i].x && newHead.y === snake[i].y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Dibujar un círculo (serpiente y comida)
+    function drawCircle(x, y, radius, fillColor, strokeColor) {
+      ctx.beginPath();
+      ctx.arc(x + box / 2, y + box / 2, radius, 0, Math.PI * 2);
+      ctx.fillStyle = fillColor;
+      ctx.fill();
+      ctx.strokeStyle = strokeColor;
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    // Dibujar la serpiente y la comida
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar el canvas
+
+      // Dibujar la serpiente
+      for (let i = 0; i < snake.length; i++) {
+        const fillColor = i === 0 ? "green" : "lightgreen";
+        const strokeColor = "darkgreen";
+        drawCircle(snake[i].x, snake[i].y, box / 2, fillColor, strokeColor);
+      }
+
+      // Dibujar la comida
+      drawCircle(food.x, food.y, box / 2, "red", "darkred");
+
+      // Si aún no se ha seleccionado dirección, no mover la serpiente
+      if (direction === null) return;
+
+      // Obtener la posición actual de la cabeza de la serpiente
+      let snakeX = snake[0].x;
+      let snakeY = snake[0].y;
+
+      // Cambiar la dirección de la serpiente
+      if (direction === "LEFT") snakeX -= box;
+      if (direction === "UP") snakeY -= box;
+      if (direction === "RIGHT") snakeX += box;
+      if (direction === "DOWN") snakeY += box;
+
+      // Si la serpiente come la comida
+      if (snakeX === food.x && snakeY === food.y) {
+        generateFood();
+      } else {
+        // Remover la última parte de la serpiente
+        snake.pop();
+      }
+
+      // Nueva cabeza de la serpiente
+      const newHead = { x: snakeX, y: snakeY };
+
+      // Verificar si la serpiente choca con los bordes o consigo misma
+      if (
+        snakeX < 0 ||
+        snakeX >= canvas.width ||
+        snakeY < 0 ||
+        snakeY >= canvas.height ||
+        collision(newHead, snake)
+      ) {
+        clearInterval(game);
+        alert("Game Over");
+      }
+
+      // Agregar la nueva cabeza
+      snake.unshift(newHead);
+    }
+
+    // Controlar la dirección con el teclado
+    document.addEventListener("keydown", function(event) {
+      if ([37, 38, 39, 40].includes(event.keyCode)) {
+        event.preventDefault(); // Evitar que las flechas hagan scroll
+      }
+
+      if (event.keyCode === 37 && direction !== "RIGHT") direction = "LEFT";
+      else if (event.keyCode === 38 && direction !== "DOWN") direction = "UP";
+      else if (event.keyCode === 39 && direction !== "LEFT") direction = "RIGHT";
+      else if (event.keyCode === 40 && direction !== "UP") direction = "DOWN";
+    });
+
+    // Controlar la dirección con gestos táctiles (para móviles)
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    // Capturar el inicio del gesto
+    document.addEventListener("touchstart", function(event) {
+      const touch = event.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    });
+
+    // Detectar la dirección del gesto (cuando el dedo se levanta)
+    document.addEventListener("touchend", function(event) {
+      const touchEndX = event.changedTouches[0].clientX;
+      const touchEndY = event.changedTouches[0].clientY;
+
+      const diffX = touchEndX - touchStartX;
+      const diffY = touchEndY - touchStartY;
+
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        // Movimiento horizontal
+        if (diffX > 0 && direction !== "LEFT") {
+          direction = "RIGHT"; // Deslizó a la derecha
+        } else if (diffX < 0 && direction !== "RIGHT") {
+          direction = "LEFT"; // Deslizó a la izquierda
+        }
+      } else {
+        // Movimiento vertical
+        if (diffY > 0 && direction !== "UP") {
+          direction = "DOWN"; // Deslizó hacia abajo
+        } else if (diffY < 0 && direction !== "DOWN") {
+          direction = "UP"; // Deslizó hacia arriba
+        }
+      }
+    });
+
+    // Escuchar cambios de tamaño de la ventana
+    window.addEventListener('resize', resizeCanvas);
+
+    // Inicializar el tamaño del canvas al cargar la página
+    resizeCanvas();
+
+    // Ejecutar el juego cada 100 ms
+    let game = setInterval(draw, 100);
+  </script>
+</body>
+</html>
